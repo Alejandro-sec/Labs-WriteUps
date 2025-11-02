@@ -1,0 +1,23 @@
+# Reflected XSS in HTML Context (Nothing Encoded) — PortSwigger Lab
+
+**Date:** 2025-11-01
+**Platform / Source:** PortSwigger Web Security Academy — Lab "Reflected XSS into HTML context with nothing encoded"
+**Host / URL:** https://0aae00070401c60a805b0375008100c8.web-security-academy.net/
+**Level:** Beginner
+
+## Summary
+During the lab, I identified a **Reflected Cross-Site Scripting (Reflected XSS)** vulnerability in the `search` parameter. Injecting a JavaScript payload into the query string resulted in execution within the document context, as demonstrated by a browser alert.
+
+## Scope and Authorization
+The tests were performed exclusively on the lab instance provided by PortSwigger. No tests were performed on external systems or in production environments.
+
+## Reconnaissance
+Initially, I inspected the lab blog interface to locate entry points. Finding no immediate evidence in the main URL, I checked the site's search box and confirmed that the form was sending the `search` parameter using GET.
+
+## Proof of Concept (PoC)
+
+- **Method:** GET
+- **Affected Parameter:** `search` (query string)
+- **Payload Used:**
+```html
+<script>alert(1)</script>
