@@ -1,0 +1,45 @@
+SQL Injection (SQLi) in Oracle - Lab Writeup
+Author: Alejandro
+
+Level: Practitioner
+
+Platform: PortSwigger Academy / Lab
+
+Initial Reconnaissance: Walking the Application
+I started by walking the application to map out its features and test different input fields. I quickly identified that the Toys & Games category filter was vulnerable to SQL Injection.
+
+Column Discovery (The Oracle Way)
+My first instinct was to check for valid columns using a standard UNION SELECT. However, I quickly realized the backend was running Oracle, which handles queries differently than MySQL or PostgreSQL (it requires a table reference like FROM dual and strict data type matching).
+
+To find the exact number of columns without breaking the syntax, I used the ORDER BY technique:
+
+' ORDER BY 1-- (Success)
+
+' ORDER BY 2-- (Success)
+
+' ORDER BY 3-- (Server Error)
+
+Since the application crashed at 3, I confirmed that the query was selecting exactly 2 columns.
+
+Finding Compatible Data Types
+Oracle is very strict: if a column expects a string and you give it a number (or vice versa), it will fail. I tested if both columns could handle text using the following payload:
+
+' UNION SELECT 'a', 'b' FROM dual--
+
+Note: In Oracle, every SELECT must have a FROM clause, so I used the built-in dual table. The request was successful, confirming that both columns accept string data.
+
+Exploitation: Fingerprinting the Database
+Once I had the column count and data types, I moved to extract system information. I targeted the version banner to confirm the environment:
+
+Payload: ' UNION SELECT banner, 'x' FROM v$version--
+
+Result: The server returned the Oracle Database version banner in the results, successfully completing the lab.
+
+Why this matters (Impact)
+While this was a simple version leak, the same technique could be used to:
+
+Enumerate users: Dumping sensitive data from all_users.
+
+Data Exfiltration: Accessing business-critical information from custom tables.
+
+Bypassing Authentication: Manipulating login queries to gain unauthorized access.
