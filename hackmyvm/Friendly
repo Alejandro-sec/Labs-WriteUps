@@ -1,0 +1,103 @@
+HackMyVM - Friendly Machine Writeup
+Author[Alejandro]
+Overview
+This writeup documents the exploitation of the "Friendly" machine from HackMyVM, demonstrating a complete attack chain from initial reconnaissance to root privilege escalation.
+Difficulty: Beginner
+Target IP: 10.75.26.48
+
+Reconnaissance
+Network Scanning
+First, we perform an Nmap scan to identify open ports and services:
+bashnmap -sV -sC 10.75.26.48
+Key Findings:
+
+Port 21 (FTP) - Open and accessible
+An index.html file was discovered in the FTP directory
+Other files present were from previous testing
+
+
+Initial Access
+FTP Enumeration
+We connect to the FTP service to assess our permissions:
+bashftp 10.75.26.48
+Discovery:
+
+Anonymous login or weak credentials allowed access
+Write permissions confirmed - we can upload files
+Read permissions confirmed - we can download files
+
+This is a critical finding as it allows us to upload a malicious payload.
+Payload Creation
+We create a PHP reverse shell using nano:
+bashnano shell.php
+We use a standard PHP reverse shell from a trusted source (such as pentestmonkey's reverse shell).
+Configuration:
+
+Set the attacker IP to our machine
+Set the listening port (e.g., 4444)
+
+Payload Upload
+Upload the malicious PHP file via FTP:
+bashput shell.php
+Setting Up the Listener
+Before triggering the reverse shell, we set up a Netcat listener:
+bashnc -lvnp 4444
+```
+
+### Triggering the Shell
+Navigate to the uploaded shell through the web browser:
+```
+http://10.75.26.48/shell.php
+
+Part 2: Privilege Escalation
+Initial Access Confirmation
+Success! The reverse shell connects back to our listener. We now have a shell as the www-data user.
+Upgrading to a Stable Shell
+The initial shell is limited, so we upgrade to a fully interactive TTY:
+bashscript /dev/null -c bash
+This gives us a proper bash shell with better functionality.
+Privilege Enumeration
+We check for privilege escalation vectors by examining sudo permissions:
+bashsudo -l
+```
+
+**Critical Finding:**
+```
+(ALL : ALL) /usr/bin/vim
+The vim binary can be executed with sudo privileges by the current user - this is a well-known privilege escalation vector.
+Exploiting Vim for Root Access
+We consult GTFOBins for the vim sudo exploitation technique:
+bashsudo vim -c ':!/bin/sh'
+Alternative method:
+bashsudo vim
+:set shell=/bin/sh
+:shell
+Verification
+Confirm root access:
+bashwhoami
+Output: root
+
+Conclusion
+Congratulations! We successfully compromised the Friendly machine and escalated to root privileges.
+Attack Chain Summary:
+
+Reconnaissance: Nmap scan identified open FTP service
+Initial Access: Exploited writable FTP directory to upload PHP reverse shell
+Shell Access: Gained www-data shell through web exploitation
+Privilege Escalation: Exploited sudo permissions on vim binary to obtain root
+
+Key Vulnerabilities:
+
+Anonymous/weak FTP credentials with write permissions
+Web server executing uploaded PHP files
+Misconfigured sudo permissions allowing vim execution as root
+
+Remediation Recommendations:
+
+Disable anonymous FTP access or restrict write permissions
+Implement file upload restrictions and validation
+Review and restrict sudo permissions following the principle of least privilege
+Use a proper web application firewall to detect malicious file uploads
+
+
+Note: Flags have been omitted from this writeup. Complete the challenge yourself to capture them!
