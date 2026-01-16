@@ -54,7 +54,7 @@ Initial Access Confirmation
 Success! The reverse shell connects back to our listener. We now have a shell as the www-data user.
 Upgrading to a Stable Shell
 The initial shell is limited, so we upgrade to a fully interactive TTY:
-bashscript /dev/null -c bash
+script /dev/null -c bash
 This gives us a proper bash shell with better functionality.
 Privilege Enumeration
 We check for privilege escalation vectors by examining sudo permissions:
