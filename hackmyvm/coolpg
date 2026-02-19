@@ -1,0 +1,156 @@
+Coolpg Report
+[Author: Alejandro]
+1. Executive Summary
+
+During the assessment, a full attack chain was identified that led from an unauthenticated SQL Injection vulnerability to full root compromise of the system. The attack involved:
+
+UNION-based SQL Injection
+
+Credential extraction
+
+SSH access
+
+Privilege escalation via misconfigured sudo
+
+The overall impact resulted in complete system compromise.
+
+2. Reconnaissance
+
+An aggressive full TCP port scan was performed against all 65,535 ports to ensure complete service discovery.
+
+Open Ports Identified:
+
+22/tcp – SSH
+
+80/tcp – HTTP (nginx)
+
+The web application was analyzed manually. A footer revealed a fully qualified domain name (FQDN), which was added to /etc/hosts for proper resolution.
+
+3. Enumeration
+
+Directory enumeration was performed against the identified virtual host using Gobuster.
+
+Three significant endpoints were discovered:
+
+Login 
+
+Search 
+
+panel
+
+The search functionality contained a comment in the page source indicating that UNION inputs were not sanitized.
+
+Initial testing confirmed injectable behavior:
+
+Normal input:
+
+test
+
+Result:
+
+username not found
+
+Injection test:
+
+' UNION SELECT 'test'--
+
+The response reflected controlled output, confirming a UNION-based SQL Injection vulnerability.
+
+4. Exploitation
+Database Identification
+
+The following payload was used to identify the database engine:
+
+' UNION SELECT version()--
+
+The output confirmed PostgreSQL.
+
+Column Enumeration
+
+The number of columns was determined by adjusting the UNION SELECT statement until the query executed successfully.
+
+NULL values were used to match column count safely:
+
+' UNION SELECT NULL, NULL, NULL--
+Table Enumeration
+
+Relevant tables were identified, including:
+
+users
+
+secrets
+
+The users table contained administrative credentials, but logging in redirected back to the same panel.
+
+The secrets table contained sensitive information, including:
+
+SSH credentials
+
+Username
+
+This provided initial system access.
+
+5. Initial Access
+
+SSH login was successfully performed using the extracted credentials.
+
+Upon login:
+
+User flag was located.
+
+Home directory contents were analyzed.
+
+Log files were inspected.
+
+6. Privilege Escalation
+
+Privilege enumeration revealed a misconfigured sudo entry:
+
+NOPASSWD: /usr/local/bin/runlogs-find.sh
+
+The script could be executed as root without password authentication.
+
+By leveraging this configuration, root privileges were obtained.
+
+7. Impact
+
+The attack chain demonstrates the following security failures:
+
+SQL Injection due to lack of prepared statements.
+
+Sensitive SSH credentials stored in the database.
+
+Privilege escalation via overly permissive sudo configuration.
+
+Successful exploitation resulted in:
+
+Full database access
+
+Unauthorized SSH access
+
+Root-level system compromise
+
+This represents total server compromise.
+
+8. Remediation Recommendations
+Application Layer
+
+Implement parameterized queries / prepared statements.
+
+Apply strict input validation.
+
+Remove sensitive data from application-accessible tables.
+
+Credential Management
+
+Avoid storing SSH credentials in databases.
+
+Enforce least privilege access.
+
+System Hardening
+
+Remove unnecessary NOPASSWD sudo entries.
+
+Restrict script execution permissions.
+
+Audit sudo configurations regularly.
