@@ -1,0 +1,42 @@
+PortSwigger
+[Author: Alejandro]
+1. Executive Summary
+During the analysis of a PortSwigger Web Security Academy lab, a Local File Inclusion (LFI) vulnerability was identified and successfully exploited via a double URL encoding bypass technique. The vulnerability allowed unauthorized access to sensitive server files, specifically /etc/passwd.
+
+2. Reconnaissance
+Manual application walkthrough was performed, analyzing the behavior of URLs and parameters across the web application. No immediately suspicious parameters were identified during initial browsing.
+Network traffic was then inspected using the browser's developer tools (Network panel), where an image loading request revealed the following parameter:
+GET /image?filename=
+This indicated that the application was dynamically loading files based on user-supplied input, a critical design flaw suggesting potential LFI exposure.
+
+3. Enumeration & Bypass Attempts
+Initial traversal payloads were tested manually:
+../
+..././
+%2f
+None of the above produced a successful response, indicating the presence of basic input filtering or WAF rules blocking standard traversal patterns.
+The lab description referenced double encoding as the intended bypass technique, which led to the following approach.
+
+4. Exploitation
+Double URL encoding was applied to both the dot and slash characters:
+. → %2e → %252e
+/ → %2f → %252f
+The following payload was constructed and repeated until the desired directory depth was reached:
+%252e%252e%252f%252e%252e%252f%252e%252e%252fetc%252fpasswd
+Which decodes to:
+../../../etc/passwd
+The server decoded the input twice, bypassing the filter on the first pass and processing the traversal on the second, resulting in the contents of /etc/passwd being returned successfully.
+
+5. Impact
+Successful exploitation of this vulnerability allows an unauthenticated attacker to read arbitrary files from the server filesystem, including sensitive system files. Depending on the server configuration, this could expose credentials, SSH keys, application source code, and configuration files.
+
+6. Remediation Recommendations
+Application Layer
+
+Remove or restrict the use of user-supplied input in file loading functions such as GET filename or GET view.
+Implement a whitelist of allowed filenames rather than accepting arbitrary input.
+
+Infrastructure
+
+Deploy a robust WAF with rules covering common LFI techniques including standard traversal, URL encoding, and double encoding patterns.
+Ensure server-side decoding is performed only once before input validation.
